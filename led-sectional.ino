@@ -1,43 +1,42 @@
 #include <ESP8266WiFi.h>
+#define FASTLED_ESP8266_RAW_PIN_ORDER
 #include <FastLED.h>
 #include <vector>
 using namespace std;
 
-#define FASTLED_ESP8266_RAW_PIN_ORDER
+#define NUM_AIRPORTS 80          // This is really the number of LEDs
+#define WIND_THRESHOLD 25        // Maximum windspeed for green, otherwise the LED turns yellow
+#define LOOP_INTERVAL 5000       // ms - interval between brightness updates and lightning strikes
+#define DO_LIGHTNING true        // Lightning uses more power, but is cool.
+#define DO_WINDS true            // color LEDs for high winds
+#define REQUEST_INTERVAL 900000  // How often we update. In practice LOOP_INTERVAL is added. In ms (15 min is 900000)
 
-#define NUM_AIRPORTS 80 // This is really the number of LEDs
-#define WIND_THRESHOLD 25 // Maximum windspeed for green, otherwise the LED turns yellow
-#define LOOP_INTERVAL 5000 // ms - interval between brightness updates and lightning strikes
-#define DO_LIGHTNING true // Lightning uses more power, but is cool.
-#define DO_WINDS true // color LEDs for high winds
-#define REQUEST_INTERVAL 900000 // How often we update. In practice LOOP_INTERVAL is added. In ms (15 min is 900000)
-
-#define USE_LIGHT_SENSOR false // Set USE_LIGHT_SENSOR to true if you're using any light sensor.
+#define USE_LIGHT_SENSOR false  // Set USE_LIGHT_SENSOR to true if you're using any light sensor.
 // Set LIGHT_SENSOR_TSL2561 to true if you're using a TSL2561 digital light sensor.
 // Kits shipped after March 1, 2019 have a digital light sensor. Setting this to false assumes an analog light sensor.
 #define LIGHT_SENSOR_TSL2561 false
 
-const char ssid[] = "EDITME"; // your network SSID (name)
-const char pass[] = "EDITME"; // your network password (use for WPA, or use as key for WEP)
+const char ssid[] = "MontecitoSharts";        // your network SSID (name)
+const char pass[] = "8104073449donald";  // your network password (use for WPA, or use as key for WEP)
 
 // Define the array of leds
 CRGB leds[NUM_AIRPORTS];
-#define DATA_PIN    14 // Kits shipped after March 1, 2019 should use 14. Earlier kits us 5.
-#define LED_TYPE    WS2811
+#define DATA_PIN 14  // Kits shipped after March 1, 2019 should use 14. Earlier kits us 5.
+#define LED_TYPE WS2811
 #define COLOR_ORDER RGB
-#define BRIGHTNESS 20 // 20-30 recommended. If using a light sensor, this is the initial brightness on boot.
+#define BRIGHTNESS 20  // 20-30 recommended. If using a light sensor, this is the initial brightness on boot.
 
 /* This section only applies if you have an ambient light sensor connected */
 #if USE_LIGHT_SENSOR
 /* The sketch will automatically scale the light between MIN_BRIGHTNESS and
 MAX_BRIGHTNESS on the ambient light values between MIN_LIGHT and MAX_LIGHT
 Set MIN_BRIGHTNESS and MAX_BRIGHTNESS to the same value to achieve a simple on/off effect. */
-#define MIN_BRIGHTNESS 20 // Recommend values above 4 as colors don't show well below that
-#define MAX_BRIGHTNESS 20 // Recommend values between 20 and 30
+#define MIN_BRIGHTNESS 20  // Recommend values above 4 as colors don't show well below that
+#define MAX_BRIGHTNESS 20  // Recommend values between 20 and 30
 
 // Light values are a raw reading for analog and lux for digital
-#define MIN_LIGHT 16 // Recommended default is 16 for analog and 2 for lux
-#define MAX_LIGHT 30 // Recommended default is 30 to 40 for analog and 20 for lux
+#define MIN_LIGHT 16  // Recommended default is 16 for analog and 2 for lux
+#define MAX_LIGHT 30  // Recommended default is 30 to 40 for analog and 20 for lux
 
 #if LIGHT_SENSOR_TSL2561
 #include <Adafruit_Sensor.h>
@@ -45,7 +44,7 @@ Set MIN_BRIGHTNESS and MAX_BRIGHTNESS to the same value to achieve a simple on/o
 #include <Wire.h>
 Adafruit_TSL2561_Unified tsl = Adafruit_TSL2561_Unified(TSL2561_ADDR_FLOAT, 12345);
 #else
-#define LIGHTSENSORPIN A0 // A0 is the only valid pin for an analog light sensor
+#define LIGHTSENSORPIN A0  // A0 is the only valid pin for an analog light sensor
 #endif
 
 #endif
@@ -53,98 +52,98 @@ Adafruit_TSL2561_Unified tsl = Adafruit_TSL2561_Unified(TSL2561_ADDR_FLOAT, 1234
 
 std::vector<unsigned short int> lightningLeds;
 std::vector<String> airports({
-  "LIFR", // 1 order of LEDs, starting with 1 should be KKIC; use VFR, WVFR, MVFR, IFR, LIFR for key; NULL for no airport
-  "IFR", // 2
-  "MVFR", // 3
-  "WVFR", // 4
-  "VFR", // 5
-  "NULL", // 6
-  "NULL", // 7
-  "KMRY", // 8
-  "KSNS", // 9
-  "KCVH", // 10
-  "KWVI", // 11
-  "KE16", // 12
-  "KRHV", // 13
-  "KSJC", // 14
-  "KNUQ", // 15
-  "KPAO", // 16
-  "KSQL", // 17
-  "KHAF", // 18
-  "KSFO", // 19
-  "KOAK", // 20
-  "KHWD", // 21
-  "KLVK", // 22
-  "KC83", // 23
-  "NULL", // 24
-  "KCCR", // 25
-  "NULL", // 26
-  "KDVO", // 27
-  "KO69", // 28
-  "KSTS", // 29
-  "NULL", // 30
-  "KAPC", // 31
-  "KSUU", // 32
-  "KVCB", // 33
-  "KEDU", // 34
-  "KSMF", // 35
-  "KSAC", // 36
-  "KMHR", // 37
-  "KMCC", // 38
-  "KLHM", // 39
-  "KMYV", // 40
-  "KBAB", // 41
-  "NULL", // 42
-  "KOVE", // 43
-  "NULL", // 44
-  "KCIC", // 45
-  "NULL", // 46
-  "KRBL", // 47
-  "NULL", // 48
-  "NULL", // 49
-  "NULL", // 50
-  "KGOO", // 51
-  "KBLU", // 52
-  "NULL", // 53
-  "KTRK", // 54
-  "KRNO", // 55
-  "KCXP", // 56
-  "KMEV", // 57
-  "KTVL", // 58
-  "NULL", // 59
-  "NULL", // 60
-  "KAUN", // 61
-  "KPVF", // 62
-  "KJAQ", // 63
-  "KCPU", // 64
-  "KO22", // 65
-  "NULL", // 66
-  "NULL", // 67
-  "KSCK", // 68
-  "KTCY", // 69
-  "NULL", // 70
-  "KMOD", // 71
-  "NULL", // 72
-  "KMER", // 73
-  "MKCE", // 74
-  "NULL", // 75
-  "KMAE", // 76
-  "NULL", // 77
-  "KFAT", // 78
-  "NULL", // 79
-  "KNLC" // 80
+  "LIFR",  // 1 order of LEDs, starting with 1 should be KKIC; use VFR, WVFR, MVFR, IFR, LIFR for key; NULL for no airport
+  "IFR",   // 2
+  "MVFR",  // 3
+  "WVFR",  // 4
+  "VFR",   // 5
+  "NULL",  // 6
+  "NULL",  // 7
+  "KMRY",  // 8
+  "KSNS",  // 9
+  "KCVH",  // 10
+  "KWVI",  // 11
+  "KE16",  // 12
+  "KRHV",  // 13
+  "KSJC",  // 14
+  "KNUQ",  // 15
+  "KPAO",  // 16
+  "KSQL",  // 17
+  "KHAF",  // 18
+  "KSFO",  // 19
+  "KOAK",  // 20
+  "KHWD",  // 21
+  "KLVK",  // 22
+  "KC83",  // 23
+  "NULL",  // 24
+  "KCCR",  // 25
+  "NULL",  // 26
+  "KDVO",  // 27
+  "KO69",  // 28
+  "KSTS",  // 29
+  "NULL",  // 30
+  "KAPC",  // 31
+  "KSUU",  // 32
+  "KVCB",  // 33
+  "KEDU",  // 34
+  "KSMF",  // 35
+  "KSAC",  // 36
+  "KMHR",  // 37
+  "KMCC",  // 38
+  "KLHM",  // 39
+  "KMYV",  // 40
+  "KBAB",  // 41
+  "NULL",  // 42
+  "KOVE",  // 43
+  "NULL",  // 44
+  "KCIC",  // 45
+  "NULL",  // 46
+  "KRBL",  // 47
+  "NULL",  // 48
+  "NULL",  // 49
+  "NULL",  // 50
+  "KGOO",  // 51
+  "KBLU",  // 52
+  "NULL",  // 53
+  "KTRK",  // 54
+  "KRNO",  // 55
+  "KCXP",  // 56
+  "KMEV",  // 57
+  "KTVL",  // 58
+  "NULL",  // 59
+  "NULL",  // 60
+  "KAUN",  // 61
+  "KPVF",  // 62
+  "KJAQ",  // 63
+  "KCPU",  // 64
+  "KO22",  // 65
+  "NULL",  // 66
+  "NULL",  // 67
+  "KSCK",  // 68
+  "KTCY",  // 69
+  "NULL",  // 70
+  "KMOD",  // 71
+  "NULL",  // 72
+  "KMER",  // 73
+  "MKCE",  // 74
+  "NULL",  // 75
+  "KMAE",  // 76
+  "NULL",  // 77
+  "KFAT",  // 78
+  "NULL",  // 79
+  "KNLC"   // 80
 });
 
 #define DEBUG false
 
-#define READ_TIMEOUT 15 // Cancel query if no data received (seconds)
-#define WIFI_TIMEOUT 60 // in seconds
-#define RETRY_TIMEOUT 15000 // in ms
+#define READ_TIMEOUT 15      // Cancel query if no data received (seconds)
+#define WIFI_TIMEOUT 60      // in seconds
+#define RETRY_TIMEOUT 15000  // in ms
 
 #define SERVER "aviationweather.gov"
 #define BASE_URI "/api/data/metar?format=xml&ids="
 
-boolean ledStatus = true; // used so leds only indicate connection status on first boot, or after failure
+boolean ledStatus = true;  // used so leds only indicate connection status on first boot, or after failure
 int loops = -1;
 
 int status = WL_IDLE_STATUS;
@@ -157,23 +156,23 @@ void setup() {
   //    ; // wait for serial port to connect. Needed for native USB
   //}
 
-  pinMode(LED_BUILTIN, OUTPUT); // give us control of the onboard LED
+  pinMode(LED_BUILTIN, OUTPUT);  // give us control of the onboard LED
   digitalWrite(LED_BUILTIN, LOW);
 
-  #if USE_LIGHT_SENSOR
-  #if LIGHT_SENSOR_TSL2561
+#if USE_LIGHT_SENSOR
+#if LIGHT_SENSOR_TSL2561
   Wire.begin(D2, D1);
-  if(!tsl.begin()) {
+  if (!tsl.begin()) {
     /* There was a problem detecting the TSL2561 ... check your connections */
     Serial.println("Ooops, no TSL2561 detected ... Check your wiring or I2C ADDR!");
   } else {
     tsl.enableAutoRange(true);
     tsl.setIntegrationTime(TSL2561_INTEGRATIONTIME_13MS);
   }
-  #else
+#else
   pinMode(LIGHTSENSORPIN, INPUT);
-  #endif
-  #endif
+#endif
+#endif
 
   // Initialize LEDs
   FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(leds, NUM_AIRPORTS).setCorrection(TypicalLEDStrip);
@@ -185,13 +184,13 @@ void adjustBrightness() {
   unsigned char brightness;
   float reading;
 
-  #if LIGHT_SENSOR_TSL2561
+#if LIGHT_SENSOR_TSL2561
   sensors_event_t event;
   tsl.getEvent(&event);
   reading = event.light;
-  #else
+#else
   reading = analogRead(LIGHTSENSORPIN);
-  #endif
+#endif
 
   Serial.print("Light reading: ");
   Serial.print(reading);
@@ -213,11 +212,11 @@ void adjustBrightness() {
 #endif
 
 void loop() {
-  digitalWrite(LED_BUILTIN, LOW); // on if we're awake
+  digitalWrite(LED_BUILTIN, LOW);  // on if we're awake
 
-  #if USE_LIGHT_SENSOR
+#if USE_LIGHT_SENSOR
   adjustBrightness();
-  #endif
+#endif
 
   int c;
   loops++;
@@ -228,7 +227,7 @@ void loop() {
 
   // Connect to WiFi. We always want a wifi connection for the ESP8266
   if (WiFi.status() != WL_CONNECTED) {
-    if (ledStatus) fill_solid(leds, NUM_AIRPORTS, CRGB::Orange); // indicate status with LEDs, but only on first run or error
+    if (ledStatus) fill_solid(leds, NUM_AIRPORTS, CRGB::Orange);  // indicate status with LEDs, but only on first run or error
     FastLED.show();
     WiFi.mode(WIFI_STA);
     WiFi.hostname("LED Sectional " + WiFi.macAddress());
@@ -240,7 +239,7 @@ void loop() {
       Serial.write('.');
       delay(1000);
     }
-    if (c >= WIFI_TIMEOUT) { // If it didn't connect within WIFI_TIMEOUT
+    if (c >= WIFI_TIMEOUT) {  // If it didn't connect within WIFI_TIMEOUT
       Serial.println("Failed. Will retry...");
       fill_solid(leds, NUM_AIRPORTS, CRGB::Orange);
       FastLED.show();
@@ -248,7 +247,7 @@ void loop() {
       return;
     }
     Serial.println("OK!");
-    if (ledStatus) fill_solid(leds, NUM_AIRPORTS, CRGB::Purple); // indicate status with LEDs
+    if (ledStatus) fill_solid(leds, NUM_AIRPORTS, CRGB::Purple);  // indicate status with LEDs
     FastLED.show();
     ledStatus = false;
   }
@@ -258,17 +257,17 @@ void loop() {
     std::vector<CRGB> lightning(lightningLeds.size());
     for (unsigned short int i = 0; i < lightningLeds.size(); ++i) {
       unsigned short int currentLed = lightningLeds[i];
-      lightning[i] = leds[currentLed]; // temporarily store original color
-      leds[currentLed] = CRGB::White; // set to white briefly
+      lightning[i] = leds[currentLed];  // temporarily store original color
+      leds[currentLed] = CRGB::White;   // set to white briefly
       Serial.print("Lightning on LED: ");
       Serial.println(currentLed);
     }
-    delay(25); // extra delay seems necessary with light sensor
+    delay(25);  // extra delay seems necessary with light sensor
     FastLED.show();
     delay(25);
     for (unsigned short int i = 0; i < lightningLeds.size(); ++i) {
       unsigned short int currentLed = lightningLeds[i];
-      leds[currentLed] = lightning[i]; // restore original color
+      leds[currentLed] = lightning[i];  // restore original color
     }
     FastLED.show();
   }
@@ -276,7 +275,7 @@ void loop() {
   if (loops >= loopThreshold || loops == 0) {
     loops = 0;
     if (DEBUG) {
-      fill_gradient_RGB(leds, NUM_AIRPORTS, CRGB::Red, CRGB::Blue); // Just let us know we're running
+      fill_gradient_RGB(leds, NUM_AIRPORTS, CRGB::Red, CRGB::Blue);  // Just let us know we're running
       FastLED.show();
     }
 
@@ -287,7 +286,7 @@ void loop() {
       if ((DO_LIGHTNING && lightningLeds.size() > 0) || USE_LIGHT_SENSOR) {
         Serial.println("There is lightning or we're using a light sensor, so no long sleep.");
         digitalWrite(LED_BUILTIN, HIGH);
-        delay(LOOP_INTERVAL); // pause during the interval
+        delay(LOOP_INTERVAL);  // pause during the interval
       } else {
         Serial.print("No lightning; Going into sleep for: ");
         Serial.println(REQUEST_INTERVAL);
@@ -296,17 +295,17 @@ void loop() {
       }
     } else {
       digitalWrite(LED_BUILTIN, HIGH);
-      delay(RETRY_TIMEOUT); // try again if unsuccessful
+      delay(RETRY_TIMEOUT);  // try again if unsuccessful
     }
   } else {
     digitalWrite(LED_BUILTIN, HIGH);
-    delay(LOOP_INTERVAL); // pause during the interval
+    delay(LOOP_INTERVAL);  // pause during the interval
   }
 }
 
-bool getMetars(){
-  lightningLeds.clear(); // clear out existing lightning LEDs since they're global
-  fill_solid(leds, NUM_AIRPORTS, CRGB::Black); // Set everything to black just in case there is no report
+bool getMetars() {
+  lightningLeds.clear();                        // clear out existing lightning LEDs since they're global
+  fill_solid(leds, NUM_AIRPORTS, CRGB::Black);  // Set everything to black just in case there is no report
   uint32_t t;
   char c;
   boolean readingAirport = false;
@@ -363,28 +362,28 @@ bool getMetars(){
     client.println("Connection: close");
     client.println();
     client.flush();
-    t = millis(); // start time
+    t = millis();  // start time
     FastLED.clear();
 
     Serial.print("Getting data");
 
     while (client.connected()) {
       if ((c = client.read()) >= 0) {
-        yield(); // Otherwise the WiFi stack can crash
+        yield();  // Otherwise the WiFi stack can crash
         currentLine += c;
-        if (currentLine.endsWith("<METAR>")) { // got to new airport entry, start paying attention
-          if (!led.empty()) { // we assume we are recording results at each change in airport
+        if (currentLine.endsWith("<METAR>")) {  // got to new airport entry, start paying attention
+          if (!led.empty()) {                   // we assume we are recording results at each change in airport
             for (vector<unsigned short int>::iterator it = led.begin(); it != led.end(); ++it) {
               doColor(currentAirport, *it, currentWind.toInt(), currentGusts.toInt(), currentCondition, currentWxstring);
             }
             led.clear();
           }
-          currentAirport = ""; // Reset everything when the airport changes
+          currentAirport = "";  // Reset everything when the airport changes
           currentCondition = "";
           currentWind = "";
           currentGusts = "";
           currentWxstring = "";
-          currentLine = "";   // Need to reset currentLine after reading each airport as the D1 Mini does not have enough memory to keep storing entire XML as string
+          currentLine = "";  // Need to reset currentLine after reading each airport as the D1 Mini does not have enough memory to keep storing entire XML as string
         } else if (currentLine.endsWith("<wx_string>")) {
           readingWxstring = true;
         } else if (readingWxstring) {
@@ -392,9 +391,9 @@ bool getMetars(){
             currentWxstring += c;
           } else {
             readingWxstring = false;
-          }  
+          }
         } else if (currentLine.endsWith("<station_id>")) {
-          readingAirport = true;   
+          readingAirport = true;
         } else if (readingAirport) {
           if (!currentLine.endsWith("<")) {
             currentAirport += c;
@@ -430,11 +429,11 @@ bool getMetars(){
           } else {
             readingCondition = false;
           }
-        } 
-        t = millis(); // Reset timeout clock
+        }
+        t = millis();  // Reset timeout clock
       } else if ((millis() - t) >= (READ_TIMEOUT * 1000)) {
         Serial.println("---Timeout---");
-        fill_solid(leds, NUM_AIRPORTS, CRGB::Cyan); // indicate status with LEDs
+        fill_solid(leds, NUM_AIRPORTS, CRGB::Cyan);  // indicate status with LEDs
         FastLED.show();
         ledStatus = true;
         client.stop();

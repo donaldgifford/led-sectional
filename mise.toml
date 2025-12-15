@@ -1,0 +1,4 @@
+[tools]
+arduino = "latest"
+python = "latest"
+uv = "latest"
